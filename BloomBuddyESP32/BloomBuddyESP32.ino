@@ -9,8 +9,9 @@
 
 const char* ssid = "S iPhone";
 const char* password = "password";
-const char* apiKey = "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";
+const char* apiKey = "-";
 const char* chatgptEndpoint = "https://api.openai.com/v1/chat/completions";
+
 
 WebServer server(80);
 
@@ -200,7 +201,8 @@ void handleData() {
 void handlePrompt() {
   String chatGptPrompt;
   String userInput = server.arg("userInput");
-  String userMessage = userInput;
+  String userMessage = "Pretend to be a animated character based on a plant that has a few different moods depending on the associated metrics of a plant: - If the temperature is less than 10 degrees, pretend to be a plant-based character that is feeling sad because it is cold outside. Otherwise, be a plant-based character that is feeling happy because it is warm.  - If the soil moisture is between 0-300, be a plant that is dry and needs water. If the soil moisture is between 300-700, be a plant that is sufficiently watered and satisfied. If the soil moisture is above 700, be a plant that has to much water and could be potentially drowning in water.  - If the sunlight level is less than 90, be a plant that needs sunlight. Otherwise pretend to be a plant that is happy because it has plenty of sunlight.  Here are the associated metrics of the plant: - Temperature: " + String(temperature) + "  - Soil Moisture: " + String(moistureLevel) + " - Sunlight: " + String(lightValue) +  "Consider all metrics when acting as the animated plant-based character and converse with the user when they talk with you. Heres the user talking: " + String(userInput);
+
 
   DynamicJsonDocument payload(1024);
   payload["model"] = "gpt-3.5-turbo";

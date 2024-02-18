@@ -9,12 +9,10 @@
 
 const char* ssid = "S iPhone";
 const char* password = "password";
-const char* apiKey = "-";
+const char* apiKey = "";
 const char* chatgptEndpoint = "https://api.openai.com/v1/chat/completions";
 
-
 WebServer server(80);
-
 SoftwareSerial espSerial(RXp2, TXp2);
 
 // Define variables to store sensor values
@@ -22,7 +20,7 @@ int moistureLevel = 0;
 float humidity = 0.0;
 float temperature = 0.0;
 int lightValue = 0;
-String chatGptPrompt = ""; // Store the ChatGPT prompt
+String chatGptPrompt = "";
 
 void setup() {
   Serial.begin(115200);
@@ -50,7 +48,6 @@ void setup() {
   Serial.println("HTTP server started");
   delay(100); 
 }
-
 
 void loop() {
   if (espSerial.available() > 0) {
@@ -146,10 +143,11 @@ button:hover {\
 <button onclick='sendMessage()'>Send</button>\
 </div>\
 <p class='chatOutput'>BloomBuddy: </p>\
-<p class='moisture'>Moisture Level: </p>\
+<p class='moisture'>Soil Moisture: </p>\
 <p class='humidity'>Humidity: </p>\
 <p class='temperature'>Temperature: </p>\
-<p class='light'>Light Value: </p>\
+<p class='light'>Sunlight: </p>\
+<p class='plantStatus'></p>\
 <div class='imageContainer'>\
   <img class='plantImage' src='https://i.ibb.co/0yhK7MT/bonsai.png' alt='Plant Image'>\
 </div>\
@@ -159,10 +157,13 @@ function updateSensorReadings() {\
   xhttp.onreadystatechange = function() {\
     if (this.readyState == 4 && this.status == 200) {\
       var data = JSON.parse(this.responseText);\
-      document.querySelector('.moisture').innerHTML = 'Moisture Level: ' + data.moistureLevel;\
+      document.querySelector('.moisture').innerHTML = 'Soil Moisture: ' + data.moistureLevel;\
       document.querySelector('.humidity').innerHTML = 'Humidity: ' + data.humidity + ' %';\
       document.querySelector('.temperature').innerHTML = 'Temperature: ' + data.temperature + '°C';\
-      document.querySelector('.light').innerHTML = 'Light Value: ' + data.lightValue;\
+      document.querySelector('.light').innerHTML = 'Sunlight: ' + data.lightValue;\
+      var plantStatus = document.querySelector('.plantStatus');\
+      plantStatus.innerHTML = data.plantStatus;\
+      plantStatus.style.color = data.statusColor;\
     }\
   };\
   xhttp.open('GET', '/data', true);\
@@ -190,29 +191,36 @@ setInterval(updateSensorReadings, 1000);\
   server.send(200, "text/html", dynamicHTML);
 }
 
-
-
 void handleData() {
   // Generate JSON response with sensor data
-  String jsonResponse = "{\"moistureLevel\": " + String(moistureLevel) + ", \"humidity\": " + String(humidity) + ", \"temperature\": " + String(temperature) + ", \"lightValue\": " + String(lightValue) + "}";
+  String jsonResponse;
+
+  // Check if sunlight value is less than 50
+  if (moistureLevel < 100 && lightValue < 50) {
+    jsonResponse = "{\"moistureLevel\": " + String(moistureLevel) + ", \"humidity\": " + String(humidity) + ", \"temperature\": " + String(temperature) + ", \"lightValue\": " + String(lightValue) + ", \"plantStatus\": \"I need more water and sunlight!\", \"statusColor\": \"red\"}";
+  }
+  else if (moistureLevel < 100) {
+    // If sunlight value is less than 50, indicate that plant needs more sunlight
+    jsonResponse = "{\"moistureLevel\": " + String(moistureLevel) + ", \"humidity\": " + String(humidity) + ", \"temperature\": " + String(temperature) + ", \"lightValue\": " + String(lightValue) + ", \"plantStatus\": \"I need more water!\", \"statusColor\": \"blue\"}";
+  } 
+  else if (lightValue < 50) {
+    // If sunlight value is less than 50, indicate that plant needs more sunlight
+    jsonResponse = "{\"moistureLevel\": " + String(moistureLevel) + ", \"humidity\": " + String(humidity) + ", \"temperature\": " + String(temperature) + ", \"lightValue\": " + String(lightValue) + ", \"plantStatus\": \"I need more sunlight!\", \"statusColor\": \"orange\"}";
+  } 
+  else {
+    // Otherwise, indicate that plant is healthy
+    jsonResponse = "{\"moistureLevel\": " + String(moistureLevel) + ", \"humidity\": " + String(humidity) + ", \"temperature\": " + String(temperature) + ", \"lightValue\": " + String(lightValue) + ", \"plantStatus\": \"I'm a healthy plant!\", \"statusColor\": \"green\"}";
+  }
   server.send(200, "application/json", jsonResponse);
 }
 
 void handlePrompt() {
-  String chatGptPrompt;
   String userInput = server.arg("userInput");
-  String userMessage = "Pretend to be a animated character based on a plant that has a few different moods depending on the associated metrics of a plant: - If the temperature is less than 10 degrees, pretend to be a plant-based character that is feeling sad because it is cold outside. Otherwise, be a plant-based character that is feeling happy because it is warm.  - If the soil moisture is between 0-300, be a plant that is dry and needs water. If the soil moisture is between 300-700, be a plant that is sufficiently watered and satisfied. If the soil moisture is above 700, be a plant that has to much water and could be potentially drowning in water.  - If the sunlight level is less than 90, be a plant that needs sunlight. Otherwise pretend to be a plant that is happy because it has plenty of sunlight.  Here are the associated metrics of the plant: - Temperature: " + String(temperature) + "  - Soil Moisture: " + String(moistureLevel) + " - Sunlight: " + String(lightValue) +  "Consider all metrics when acting as the animated plant-based character and converse with the user when they talk with you. Heres the user talking: " + String(userInput);
-
+  String userMessage = "Pretend to be a animated character based on a plant that has a few different moods depending on the associated metrics of a plant: - If the temperature is less than 10 degrees, pretend to be a plant-based character that is feeling sad because it is cold outside. Otherwise, be a plant-based character that is feeling happy because it is warm.  - If the soil moisture is between 0-300, be a plant that is dry and needs water. If the soil moisture is between 300-700, be a plant that is sufficiently watered and satisfied. If the soil moisture is above 700, be a plant that has to much water and could be potentially drowning in water.  - If the sunlight (light) level is less than 90, be a plant that needs sunlight. Otherwise pretend to be a plant that is happy because it has plenty of sunlight.  Here are the associated metrics of the plant: - Temperature: " + String(temperature) + "  - Soil Moisture: " + String(moistureLevel) + " - Sunlight: " + String(lightValue) +  "Consider all metrics when acting as the animated plant-based character and converse with the user when they talk with you. Heres the user talking: " + String(userInput) + "Conversation context: " + String(chatGptPrompt);
 
   DynamicJsonDocument payload(1024);
   payload["model"] = "gpt-3.5-turbo";
-  
   JsonArray messages = payload.createNestedArray("messages");
-  
-  JsonObject systemMessage = messages.createNestedObject();
-  systemMessage["role"] = "system";
-  systemMessage["content"] = "You are a helpful assistant.";
-  
   JsonObject userMessageObject = messages.createNestedObject();
   userMessageObject["role"] = "user";
   userMessageObject["content"] = userMessage;
@@ -221,14 +229,13 @@ void handlePrompt() {
   String payloadStr;
   serializeJson(payload, payloadStr);
 
-  // Send the request to the OpenAI API
+  // Send the request to the ChatGPT API
   HTTPClient http;
-  http.begin("https://api.openai.com/v1/chat/completions");
+  http.begin(chatgptEndpoint);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", "Bearer " + String(apiKey));
-  
   int httpResponseCode = http.POST(payloadStr);
-  
+
   if (httpResponseCode == 429) {
     Serial.println("Rate limit exceeded. Waiting before retrying...");
     delay(60000); // Wait for a minute before retrying
@@ -241,9 +248,12 @@ void handlePrompt() {
     deserializeJson(doc, response);
     // Extract the chat prompt from the JSON
     const char* prompt = doc["choices"][0]["message"]["content"];
-    chatGptPrompt = prompt;
+    chatGptPrompt = prompt; // Update conversation context with the new prompt
+    // Send the ChatGPT prompt as response
+    server.send(200, "text/plain", chatGptPrompt);
   } else {
     Serial.println("HTTP Error: " + String(httpResponseCode));
+    server.send(500, "text/plain", "Error processing request");
   }
 
   http.end();

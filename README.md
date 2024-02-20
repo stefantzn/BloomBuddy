@@ -45,4 +45,4 @@ BloomBuddy is just the start of what personifying our hobbies could look like. W
 
 ![BloomBuddy](https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/002/771/658/datas/gallery.jpg)
 
-### Project was submitted to MakeUofT 2024 and won the Best use of Kintone award category 🏆
+### Best use of Kintone award at MakeUofT 2024 🏆
